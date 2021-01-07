@@ -32,7 +32,8 @@ RUN echo "===== Install yq 3.4.1 =====" \
 RUN chown root:root /usr/local/bin/*
 
 # Sometimes you need dig...
-RUN dnf install -y bind-utils
+RUN dnf install -y bind-utils diffutils iputils
+
 
 # https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact
 ENTRYPOINT ["/bin/sh","-c"]
