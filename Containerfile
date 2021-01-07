@@ -36,7 +36,7 @@ RUN chown root:root /usr/local/bin/*
 # diffutils -> diff
 # iputils -> ping
 # iproute -> ip
-RUN dnf install -y bind-utils diffutils iputils iproute  telnet
+RUN dnf install -y bind-utils diffutils iputils iproute
 
 
 # https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact
