@@ -1,0 +1,60 @@
+# oc new-project dns-checker
+# oc adm policy add-cluster-role-to-user cluster-reader -z default
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  creationTimestamp: null
+  labels:
+    run: dns-checker
+  name: dns-checker
+spec:
+  updateStrategy:
+    type: OnDelete
+  selector:
+    matchLabels:
+      run: dns-checker
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        run: dns-checker
+    spec:
+      tolerations:
+      - operator: Exists
+      containers:
+      - image: quay.io/openshift-examples/toolbox:main
+        imagePullPolicy: Always
+        name: dns-checker
+        command:
+          - /bin/bash
+          - -c
+          - |
+            #!/bin/bash
+            while true; do
+              DNS_ENDPOINTS=$( curl --silent \
+                --cacert /run/secrets/kubernetes.io/serviceaccount/ca.crt \
+                --header "Authorization: Bearer $(cat /run/secrets/kubernetes.io/serviceaccount/token)" \
+                https://kubernetes.default.svc.cluster.local/api/v1/namespaces/openshift-dns/endpoints/dns-default | jq '.subsets[] | .addresses[] | .ip' -r | tr "\n " " ")
+              echo "# Collected DNS Endpoints: $DNS_ENDPOINTS"
+              echo "# Run on Node: $K8S_NODENAME"
+              echo -n "# ";date
+              for i in $DNS_ENDPOINTS ; do
+                printf "DNS IP: %-16s : " $i
+                RESULT=$(dig -p 5353 +retry=1 +tries=1 +time=1 +short +identify  kubernetes.default.svc.cluster.local. @${i})
+                RC=$?
+                if [ $RC -gt 0 ] ; then
+                  echo -n "FAIL (RC: $RC)"
+                else
+                  echo -n "PASS"
+                fi
+                echo -n "      (Details: $RESULT )"
+                echo ""
+              done
+              sleep 5;
+            done;
+        env:
+        - name: K8S_NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+
